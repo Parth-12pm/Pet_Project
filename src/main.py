@@ -1,20 +1,22 @@
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
 from fastapi import FastAPI
 
 from .api.views import router as api_router
-from .db.util import close_db_client, get_db_client
+from .db.util import get_mongodb_client
 from .pet_project.settings import settings
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    # set up mongodb
-    client = get_db_client()
-    app.state.mongodb = client.get_database(settings.MONGO_DB_NAME)
+    # set up MongoDB
+    client = get_mongodb_client()
+    db = client.get_database(settings.MONGO_DB_NAME)
+    app.mongodb = db  # type: ignore[attr-defined]
     yield
-    close_db_client()
+    # close MongoDB connection
+    client.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -23,4 +25,4 @@ app.include_router(api_router)
 
 @app.get("/")
 async def read_root() -> dict[str, str]:
-    return {"message": "Hello World this is my first FastAPI application"}
+    return {"Hello": "pet project world"}
